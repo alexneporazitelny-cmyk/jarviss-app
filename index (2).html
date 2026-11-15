@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>J.A.R.V.I.S.</title>
+<style>
+  :root { --h: 195; --bg: #000; --bg-soft: hsl(var(--h) 55% 5%); --line: hsl(var(--h) 45% 18%); --orange: hsl(var(--h) 100% 60%); --glow: hsl(var(--h) 100% 82%); --fg: #e6f7ff; --muted: hsl(var(--h) 18% 62%);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; --display: "Avenir Next Condensed", "DIN Condensed", Bahnschrift, "Arial Narrow", "Roboto Condensed", system-ui, sans-serif; color-scheme: dark; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; overflow: hidden; padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px)); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+  #orb { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 0; transition: opacity .6s; }
+  .bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; transition: opacity .6s;
+    background: radial-gradient(60% 45% at 50% 46%, hsl(var(--h) 100% 50% / .12), transparent 70%), repeating-linear-gradient(0deg, hsl(var(--h) 100% 60% / .03) 0 1px, transparent 1px 3px); }
+  .bg::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(hsl(var(--h) 100% 60% / .07) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--h) 100% 60% / .07) 1px, transparent 1px); background-size: 44px 44px; -webkit-mask-image: radial-gradient(circle at 50% 46%, #000, transparent 65%); mask-image: radial-gradient(circle at 50% 46%, #000, transparent 65%); }
+  body.asleep #orb, body.asleep .bg { opacity: 0; }
+  .app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding-block: 10px 12px; transition: opacity .6s; }
+  .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .brand { font-family: var(--display); font-weight: 700; letter-spacing: .3em; font-size: 14px; color: var(--glow); text-shadow: 0 0 12px hsl(var(--h) 100% 60% / .7); }
+  .tele { margin-top: 3px; font-family: var(--display); font-size: 11px; letter-spacing: .16em; color: var(--muted); }
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .tbtn { font-family: var(--display); font-size: 12px; letter-spacing: .1em; color: var(--muted); background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 7px 10px; min-height: 34px; cursor: pointer; }
+  .tbtn[aria-pressed="false"] { opacity: .6; }
+  .stage { position: relative; flex: 1; min-height: 0; }
+  .br { position: absolute; width: 20px; height: 20px; border: 0 solid hsl(var(--h) 100% 65% / .5); pointer-events: none; }
+  .br.a { left: 0; top: 0; border-width: 1px 0 0 1px; } .br.b { right: 0; top: 0; border-width: 1px 1px 0 0; }
+  .br.c { left: 0; bottom: 0; border-width: 0 0 1px 1px; } .br.d { right: 0; bottom: 0; border-width: 0 1px 1px 0; }
+  .cap { position: absolute; left: 0; right: 0; top: 62%; text-align: center; pointer-events: none; }
+  .status { font-family: var(--display); font-weight: 700; letter-spacing: .3em; font-size: 13px; color: var(--glow); text-shadow: 0 0 10px hsl(var(--h) 100% 60% / .6); transition: opacity .4s; }
+  .has-reply .status { opacity: 0; }
+  .live { margin: 8px auto 0; max-width: 28em; min-height: 1.4em; font-size: 17px; color: var(--fg); overflow-wrap: anywhere; }
+  .reply { position: absolute; left: 0; right: 0; bottom: 0; max-height: 42%; overflow-y: auto; text-align: center; padding: 18px 4px 6px; background: linear-gradient(to bottom, transparent, var(--bg) 22px); }
+  .you { color: var(--muted); font-size: 13px; margin: 0 0 8px; overflow-wrap: anywhere; }
+  .answer { margin: 0 auto; max-width: 34em; font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .answer.err { color: hsl(38 100% 70%); }
+  .pic { display: block; margin: 10px auto 0; max-width: 100%; max-height: 32vh; object-fit: contain; border-radius: 8px; border: 1px solid var(--line); }
+  .note { margin: 10px auto 0; max-width: 34em; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .file { margin: 12px auto 0; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .file .name { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .primary { font: inherit; font-weight: 600; font-size: 14px; color: #001118; background: var(--orange); border: 0; border-radius: 999px; padding: 10px 18px; min-height: 40px; cursor: pointer; }
+  .chips { display: none; gap: 8px; overflow-x: auto; padding: 4px 0 8px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  body.kb .chips { display: flex; }
+  .chip { flex: 0 0 auto; font: inherit; font-size: 13px; color: var(--fg); background: var(--bg-soft); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; min-height: 36px; cursor: pointer; }
+  .dock { display: none; gap: 8px; align-items: center; margin-bottom: 8px; }
+  body.kb .dock { display: flex; }
+  .dock input[type="text"] { flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--fg); background: var(--bg-soft); border: 1px solid var(--line); border-radius: 999px; padding: 12px 16px; min-height: 48px; }
+  .dock input::placeholder { color: var(--muted); }
+  .base { display: flex; align-items: center; justify-content: center; gap: 28px; padding-top: 4px; }
+  .sp { width: 48px; }
+  .round { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg-soft); color: var(--glow); display: grid; place-items: center; padding: 0; cursor: pointer; }
+  .round.go { background: var(--orange); color: #001118; border-color: var(--orange); }
+  .round.big { width: 68px; height: 68px; opacity: .6; }
+  .round.big.on { opacity: 1; border-color: var(--orange); box-shadow: 0 0 22px hsl(var(--h) 100% 60% / .5), inset 0 0 14px hsl(var(--h) 100% 60% / .25); animation: breathe 2.4s ease-in-out infinite; }
+  .round svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .round.big svg { width: 28px; height: 28px; }
+  @keyframes breathe { 50% { box-shadow: 0 0 36px hsl(var(--h) 100% 60% / .8), inset 0 0 18px hsl(var(--h) 100% 60% / .35); } }
+  body.asleep .app { opacity: 0; pointer-events: none; }
+  #wake { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: 48px; height: 48px; border: 0; padding: 0; background: transparent; opacity: 0; pointer-events: none; transition: opacity .6s; cursor: pointer; z-index: 2; }
+  #wake::after { content: ""; position: absolute; inset: 17px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 14px 4px hsl(var(--h) 100% 60% / .55); animation: pulse 2.4s ease-in-out infinite; }
+  body.asleep #wake { opacity: 1; pointer-events: auto; }
+  @keyframes pulse { 50% { transform: scale(.55); opacity: .6; } }
+  .opt select { font: inherit; color: var(--fg); background: var(--bg-soft); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; }
+
+  .top, .base { display: none; }
+  body.ctl .top, body.ctl .base { display: flex; }
+  body.notext .live, body.notext .status { display: none; }
+  body.notext .reply:not(.errshow) { display: none; }
+  #orb, .bg, .app { transition: opacity .25s; }
+  body.asleep #wake { opacity: .3; }
+  #gear { position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--muted); opacity: 0; pointer-events: none; z-index: 2; }
+  body.asleep #gear { opacity: .35; pointer-events: auto; }
+  #gear svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  #hint { position: fixed; left: 16px; right: 16px; top: 50%; transform: translateY(-50%); text-align: center; color: var(--glow); font-family: var(--display); letter-spacing: .18em; font-size: 15px; z-index: 3; pointer-events: none; }
+  .settings { position: fixed; inset: 0; background: var(--bg); overflow-y: auto; z-index: 5; padding: calc(env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px)); }
+  .settings[hidden] { display: none; }
+  .settings .in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .settings .in > *, .prov > * { min-width: 0; }
+  .settings h2 { font-family: var(--display); letter-spacing: .2em; font-size: 16px; color: var(--glow); margin: 0; }
+  .settings p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .prov { border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; background: var(--bg-soft); min-width: 0; }
+  .prov .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .prov label.chk { display: flex; align-items: center; gap: 10px; font-weight: 600; min-height: 32px; }
+  .prov input[type="checkbox"], .prov input[type="radio"] { width: 20px; height: 20px; accent-color: var(--orange); }
+  .prov .main { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .prov input[type="password"], .prov input[type="text"] { width: 100%; font: inherit; font-size: 15px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-height: 44px; }
+  .prov small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .opt { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+  .opt input { width: 20px; height: 20px; accent-color: var(--orange); }
+  @media (prefers-reduced-motion: reduce) { #wake::after { animation: none; } .orbwrap, .app { transition: none; } }
+</style>
+</head>
+<body class="asleep notext">
+<div class="bg"></div>
+<canvas id="orb" aria-label="J.A.R.V.I.S."></canvas>
+<div class="app" id="app">
+  <div class="top">
+    <div><div class="brand">J.A.R.V.I.S.</div><div class="tele" id="tele"></div></div>
+    <div class="tools">
+      <button class="tbtn" id="ttsBtn" type="button" aria-pressed="true">Hlas: zap.</button>
+      <button class="tbtn" id="cfgBtn" type="button">Nastavenia</button>
+      <button class="tbtn" id="hideBtn" type="button">Skryť</button>
+    </div>
+  </div>
+  <div class="stage" id="stage">
+    <i class="br a"></i><i class="br b"></i><i class="br c"></i><i class="br d"></i>
+    <div class="cap" id="cap"><div class="status" id="status">Pripravený</div><div class="live" id="live"></div></div>
+    <div class="reply" id="reply" hidden aria-live="polite">
+      <p class="you" id="you"></p>
+      <p class="answer" id="answer"></p>
+      <img class="pic" id="pic" alt="Vygenerovaný obrázok" hidden>
+      <p class="note" id="note" hidden></p>
+      <div class="file" id="file" hidden>
+        <span class="name" id="fileName"></span>
+        <button class="primary" id="fileBtn" type="button">Stiahnuť</button>
+      </div>
+    </div>
+  </div>
+  <div class="chips" id="chips">
+    <button class="chip" type="button" data-send="Povedz mi vtip.">Povedz vtip</button>
+    <button class="chip" type="button" data-fill="Urob mi prezentáciu o ">Prezentácia</button>
+    <button class="chip" type="button" data-fill="Vytvor cez ChatGPT obrázok o ">Obrázok</button>
+    <button class="chip" type="button" data-fill="Napíš mi Word dokument: ">Word dokument</button>
+    <button class="chip" type="button" data-fill="Urob mi tabuľku: ">Tabuľka</button>
+    <button class="chip" type="button" data-send="Čo všetko vieš urobiť?">Čo vieš?</button>
+  </div>
+  <form class="dock" id="form" autocomplete="off">
+    <input type="text" id="msg" placeholder="Prikáž mi niečo, pane…" enterkeyhint="send" aria-label="Pokyn pre Jarvisa">
+    <button class="round go" id="send" type="submit" aria-label="Odoslať"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+  </form>
+  <div class="base">
+    <button class="round" id="kbBtn" type="button" aria-label="Písať"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M8 14h8"/></svg></button>
+    <button class="round big on" id="mic" type="button" aria-label="Mikrofón zapnúť alebo vypnúť" aria-pressed="true" hidden><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    <span class="sp"></span>
+  </div>
+</div>
+<button id="wake" type="button" aria-label="Zobraziť Jarvisa"></button>
+<div id="hint" hidden></div>
+<button id="gear" type="button" aria-label="Nastavenia"><svg viewBox="0 0 24 24"><path d="M4 7h9M19 7h1M4 17h1M11 17h9"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg></button>
+
+<div class="settings" id="settings" hidden>
+  <div class="in">
+    <h2>NASTAVENIA</h2>
+    <p>Zaškrtnite AI, ktoré môže Jarvis používať, a vložte ich API kľúče. Kľúče sa ukladajú len v tomto zariadení a posielajú sa iba priamo danej AI.</p>
+    <div id="provs" style="display:grid;grid-template-columns:minmax(0,1fr);gap:14px"></div>
+    <label class="opt"><input type="checkbox" id="showText"> <span>Zobrazovať aj text odpovede</span></label>
+    <label class="opt"><span>Hlas</span> <select id="voiceSel"><option value="auto">Jarvis (ChatGPT hlas, ak je kľúč)</option><option value="browser">Hlas telefónu</option></select></label>
+    <label class="opt"><span>Farba</span> <select id="theme"><option value="blue">Modrá (Iron Man)</option><option value="gold">Zlatá</option></select></label>
+    <label class="opt"><input type="checkbox" id="verify"> <span>Overovať odpovede druhou zaškrtnutou AI</span></label>
+    <p>Hlavná AI odpovie ako prvá. Ak zlyhá, Jarvis skúsi ďalšiu zaškrtnutú. Pri zapnutom overovaní druhá AI skontroluje odpoveď a opraví ju, ak je nesprávna.</p>
+    <button class="primary" id="cfgDone" type="button">Hotovo</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pptxgenjs/3.12.0/pptxgen.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var stage = $("stage"), statusEl = $("status"), replyBox = $("reply"), youEl = $("you"), answerEl = $("answer"),
+      noteEl = $("note"), picEl = $("pic"), fileBox = $("file"), fileName = $("fileName"), fileBtn = $("fileBtn"),
+      msg = $("msg"), micBtn = $("mic"), sendBtn = $("send"), ttsBtn = $("ttsBtn"), settings = $("settings");
+
+  /* ---------- nastavenia ---------- */
+  var PROVIDERS = {
+    claude: { label: "Claude (Anthropic)", model: "claude-sonnet-5-5", img: "", where: "console.anthropic.com → API Keys" },
+    openai: { label: "ChatGPT (OpenAI)", model: "gpt-4o-mini", img: "gpt-image-1", where: "platform.openai.com/api-keys" },
+    gemini: { label: "Gemini (Google)", model: "gemini-2.5-flash", img: "gemini-2.5-flash-image", where: "aistudio.google.com/apikey" }
+  };
+  var ORDER = ["claude", "openai", "gemini"];
+  var cfg = { main: "claude", verify: false, tts: true, theme: "blue", mic: true, text: false, voice: "auto", p: {} };
+  try { var saved = JSON.parse(localStorage.getItem("jarvis-cfg") || "null"); if (saved && typeof saved === "object") cfg = Object.assign(cfg, saved); } catch (e) {}
+  ORDER.forEach(function (k) {
+    cfg.p[k] = Object.assign({ on: false, key: "", model: PROVIDERS[k].model, img: PROVIDERS[k].img }, cfg.p[k] || {});
+  });
+  function saveCfg() { try { localStorage.setItem("jarvis-cfg", JSON.stringify(cfg)); } catch (e) {} }
+
+  function buildSettings() {
+    var box = $("provs"); box.textContent = "";
+    ORDER.forEach(function (k) {
+      var P = PROVIDERS[k], c = cfg.p[k];
+      var wrap = document.createElement("div"); wrap.className = "prov";
+      var head = document.createElement("div"); head.className = "head";
+      var lab = document.createElement("label"); lab.className = "chk";
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!c.on;
+      cb.onchange = function () { c.on = cb.checked; saveCfg(); };
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(P.label));
+      var mn = document.createElement("label"); mn.className = "main";
+      var rd = document.createElement("input"); rd.type = "radio"; rd.name = "main"; rd.checked = cfg.main === k;
+      rd.onchange = function () { if (rd.checked) { cfg.main = k; saveCfg(); } };
+      mn.appendChild(rd); mn.appendChild(document.createTextNode("Hlavná"));
+      head.appendChild(lab); head.appendChild(mn);
+      var key = document.createElement("input"); key.type = "password"; key.placeholder = "API kľúč"; key.value = c.key; key.autocomplete = "off";
+      key.setAttribute("aria-label", "API kľúč " + P.label);
+      key.oninput = function () { c.key = key.value.trim(); saveCfg(); };
+      var mod = document.createElement("input"); mod.type = "text"; mod.value = c.model; mod.setAttribute("aria-label", "Model textu " + P.label);
+      mod.oninput = function () { c.model = mod.value.trim() || P.model; saveCfg(); };
+      var l1 = document.createElement("small"); l1.textContent = "Model textu";
+      var sm = document.createElement("small"); sm.textContent = "Kľúč získate: " + P.where;
+      wrap.appendChild(head); wrap.appendChild(key); wrap.appendChild(sm); wrap.appendChild(l1); wrap.appendChild(mod);
+      if (P.img) {
+        var l2 = document.createElement("small"); l2.textContent = "Model obrázkov (generovanie býva platené)";
+        var im = document.createElement("input"); im.type = "text"; im.value = c.img || P.img; im.setAttribute("aria-label", "Model obrázkov " + P.label);
+        im.oninput = function () { c.img = im.value.trim() || P.img; saveCfg(); };
+        wrap.appendChild(l2); wrap.appendChild(im);
+      } else {
+        var l3 = document.createElement("small"); l3.textContent = "Claude obrázky generovať neumí.";
+        wrap.appendChild(l3);
+      }
+      box.appendChild(wrap);
+    });
+    $("verify").checked = !!cfg.verify;
+  }
+  $("verify").onchange = function () { cfg.verify = $("verify").checked; saveCfg(); };
+  $("cfgBtn").onclick = function () { buildSettings(); settings.hidden = false; };
+  $("cfgDone").onclick = function () { settings.hidden = true; };
+  function active() {
+    var list = ORDER.filter(function (k) { return cfg.p[k].on && cfg.p[k].key; });
+    var i = list.indexOf(cfg.main);
+    if (i > 0) { list.splice(i, 1); list.unshift(cfg.main); }
+    return list;
+  }
+
+  /* ---------- HUD guľa ---------- */
+  var cv = $("orb"), ctx = cv.getContext("2d"), capEl = $("cap"), liveEl = $("live"), teleEl = $("tele");
+  var mode = "idle", energy = 0.1, voice = 0, shift = 0, warm = 0, appear = 1, lastTop = -9, t0 = performance.now(), TAU = 6.2832;
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var LABELS = { idle: "Pripravený", listening: "Počúvam…", thinking: "Premýšľam…", speaking: "Hovorím…" };
+  var HM = 195, HA = 38;
+  function applyTheme() { var g = cfg.theme === "gold"; HM = g ? 30 : 195; HA = g ? 195 : 38; document.documentElement.style.setProperty("--h", HM); }
+  applyTheme();
+  function setMode(m) { mode = m; statusEl.textContent = LABELS[m] || ""; if (m === "idle") { scheduleMic(300); poke(); } else if (m === "listening") poke(); }
+  function C(h, l, a) { return "hsla(" + h + ",100%," + l + "%," + a + ")"; }
+  function arc(cx, cy, r, a0, a1) { ctx.beginPath(); ctx.arc(cx, cy, r, a0, a1); ctx.stroke(); }
+  function ticks(cx, cy, r, n, len, big, every, rot) {
+    ctx.beginPath();
+    for (var i = 0; i < n; i++) { var a = rot + i * TAU / n, l = i % every === 0 ? big : len, c = Math.cos(a), s = Math.sin(a); ctx.moveTo(cx + c * r, cy + s * r); ctx.lineTo(cx + c * (r + l), cy + s * (r + l)); }
+    ctx.stroke();
+  }
+  var SPR = {};
+  function sprite(h, l) { var k = Math.round(h) + "_" + l; if (SPR[k]) return SPR[k]; var c = document.createElement("canvas"); c.width = c.height = 128; var g = c.getContext("2d"), r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, C(h, l, 1)); r.addColorStop(0.5, C(h, l - 8, 0.5)); r.addColorStop(1, C(h, l - 15, 0)); g.fillStyle = r; g.fillRect(0, 0, 128, 128); return (SPR[k] = c); }
+  function glow(x, y, r, h, l, a0) { ctx.globalAlpha = Math.min(1, a0); ctx.drawImage(sprite(h, l), x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; }
+  var SRECT = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+  function measure() { SRECT = stage.getBoundingClientRect(); lastTop = -9; }
+  try { new ResizeObserver(measure).observe(stage); } catch (e) {}
+  window.addEventListener("resize", measure); measure();
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (document.body.classList.contains("asleep")) return;
+    var d = Math.min(window.devicePixelRatio || 1, /Android/i.test(navigator.userAgent) ? 1.2 : 2), w = Math.round(cv.clientWidth * d), h = Math.round(cv.clientHeight * d);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    var t = (now - t0) / 1000 * (reduce ? 0.3 : 1), sr = SRECT;
+    shift += ((stage.classList.contains("has-reply") && !document.body.classList.contains("notext") ? 1 : 0) - shift) * 0.08; appear += (1 - appear) * 0.12;
+    var Rc = Math.min(sr.width * 0.46, sr.height * 0.4, 240) * (1 - 0.38 * shift) * (0.55 + 0.45 * appear), cyc = sr.top + sr.height * (0.5 - 0.22 * shift);
+    var cx = (sr.left + sr.width / 2) * d, cy = cyc * d, R = Rc * d;
+    var top = Math.round(cyc - sr.top + Rc * 1.04 + 4); if (top !== lastTop) { lastTop = top; capEl.style.top = top + "px"; }
+    voice *= 0.93;
+    var tg = mode === "idle" ? 0.1 + 0.03 * Math.sin(t * 1.1) : mode === "listening" ? 0.15 + 0.04 * Math.sin(t * 1.7) + 0.6 * voice : mode === "thinking" ? 0.3 + 0.08 * Math.sin(t * 4) : 0.28 + 0.32 * voice + 0.2 * Math.abs(Math.sin(t * 6.1) * Math.sin(t * 2.7 + 1));
+    energy += (tg - energy) * 0.12; warm += ((mode === "thinking" ? 1 : 0) - warm) * 0.06;
+    var E = energy, spin = mode === "thinking" ? 3 : 1, lw = Math.max(1, R * 0.012), i;
+    ctx.clearRect(0, 0, w, h); ctx.lineCap = "round"; ctx.globalCompositeOperation = "lighter";
+    glow(cx, cy, R * 1.3, HM, 55, 0.3 + 0.3 * E);
+    for (i = 0; i < 3; i++) {
+      var a = t * (0.4 + i * 0.17) + i * 2.1, o = R * 0.2 * (0.5 + E);
+      glow(cx + Math.cos(a) * o, cy + Math.sin(a * 1.3) * o, R * (0.46 + 0.12 * E), HM + (i - 1) * 14, 60, 0.26 + 0.16 * E);
+    }
+    if (warm > 0.02) glow(cx, cy, R * 0.7, HA, 60, 0.35 * warm);
+    glow(cx, cy, R * (0.15 + 0.07 * E) * 2.2, HM, 90, 0.95);
+    ctx.globalCompositeOperation = "source-over";
+    var col = function (l, al) { return C(HM, l, al); };
+    ctx.lineWidth = R * 0.05; ctx.strokeStyle = col(70, 0.3 + 0.4 * E);
+    for (i = 0; i < 10; i++) { var s0 = -t * 0.25 + i * TAU / 10; arc(cx, cy, R * 0.27, s0, s0 + TAU / 10 * 0.62); }
+    ctx.lineWidth = lw; ctx.strokeStyle = col(70, 0.55); arc(cx, cy, R * 0.34, 0, TAU); ticks(cx, cy, R * 0.34, 60, R * 0.025, R * 0.045, 5, -t * 0.2);
+    ctx.lineWidth = R * 0.022; ctx.strokeStyle = col(65, 0.75);
+    var ra = t * 0.5 * spin; arc(cx, cy, R * 0.46, ra, ra + 1.5); arc(cx, cy, R * 0.46, ra + 2.2, ra + 3.3); arc(cx, cy, R * 0.46, ra + 4, ra + 5.4);
+    ctx.lineWidth = lw; ctx.strokeStyle = col(70, 0.28); arc(cx, cy, R * 0.58, 0, TAU);
+    ctx.strokeStyle = col(75, 0.5); ticks(cx, cy, R * 0.58, 120, R * 0.016, R * 0.04, 10, t * 0.12);
+    ctx.lineWidth = Math.max(1.5, R * 0.014); ctx.strokeStyle = col(72, 0.55 + 0.35 * E); ctx.beginPath();
+    for (i = 0; i < 96; i++) {
+      var an = i * TAU / 96 - 1.5708, n = (Math.sin(i * 1.7 + t * 3.1) * 0.5 + 0.5) * (Math.sin(i * 0.63 - t * 2.3) * 0.5 + 0.5), hh = R * (0.012 + 0.13 * E * (0.3 + n)), r0 = R * 0.7;
+      ctx.moveTo(cx + Math.cos(an) * r0, cy + Math.sin(an) * r0); ctx.lineTo(cx + Math.cos(an) * (r0 + hh), cy + Math.sin(an) * (r0 + hh));
+    }
+    ctx.stroke();
+    ctx.lineWidth = lw; ctx.strokeStyle = col(70, 0.3 + 0.3 * E); arc(cx, cy, R * 0.9, 0, TAU);
+    ctx.lineWidth = lw * 2; ctx.strokeStyle = col(65, 0.5); var ro = t * 0.45; arc(cx, cy, R * 0.97, ro, ro + 1.6); arc(cx, cy, R * 0.97, ro + 3.14, ro + 4.74);
+    ctx.lineWidth = lw; ctx.strokeStyle = col(80, 0.7);
+    for (i = 0; i < 4; i++) { var q = i * 1.5708; ctx.beginPath(); ctx.moveTo(cx + Math.cos(q) * R * 0.99, cy + Math.sin(q) * R * 0.99); ctx.lineTo(cx + Math.cos(q) * R * 1.06, cy + Math.sin(q) * R * 1.06); ctx.stroke(); }
+    if (warm > 0.02) { ctx.lineWidth = R * 0.03; for (i = 0; i < 26; i++) { ctx.strokeStyle = C(HA, 62, warm * (1 - i / 26) * 0.8); var sa = t * 3.2 - i * 0.05; arc(cx, cy, R * 0.8, sa - 0.05, sa); } }
+    if (mode === "listening") { ctx.lineWidth = lw; for (i = 0; i < 2; i++) { var ph = (t * 0.7 + i * 0.5) % 1; ctx.strokeStyle = col(70, (1 - ph) * (0.12 + 0.35 * voice)); arc(cx, cy, R * (0.5 + 0.5 * ph), 0, TAU); } }
+  }
+  requestAnimationFrame(frame);
+  function paintTele() { teleEl.textContent = new Date().toLocaleTimeString("sk-SK", { hour: "2-digit", minute: "2-digit" }) + "   " + (SR && cfg.mic ? "MIKROFÓN AKTÍVNY" : "MIKROFÓN VYPNUTÝ"); }
+  setInterval(paintTele, 5000);
+
+  /* ---------- hlas von ---------- */
+  var speakToken = 0, sp = { pending: 0, ended: true, chain: Promise.resolve(), audio: null, vt: 0 };
+  var TTS_STYLE = "Hovor ako J.A.R.V.I.S. z filmu Iron Man: pokojný, uhladený britský komorník, nižší pokojný hlas, suchý nadhľad, plynulé tempo. Hovor zreteľne po slovensky.";
+  function paintTts() { ttsBtn.setAttribute("aria-pressed", String(cfg.tts)); ttsBtn.textContent = cfg.tts ? "Hlas: zap." : "Hlas: vyp."; }
+  paintTts();
+  ttsBtn.onclick = function () { cfg.tts = !cfg.tts; paintTts(); saveCfg(); if (!cfg.tts) stopSpeech(); };
+  function stopSpeech() {
+    speakToken++; clearInterval(sp.vt); sp.pending = 0; sp.ended = true;
+    try { if (sp.audio) { sp.audio.pause(); sp.audio = null; } } catch (e) {}
+    try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch (e) {}
+    if (mode === "speaking") setMode("idle");
+  }
+  function pickVoice() {
+    try {
+      var vs = speechSynthesis.getVoices(), pref = ["sk", "cs", "pl"];
+      for (var p = 0; p < pref.length; p++)
+        for (var i = 0; i < vs.length; i++) if ((vs[i].lang || "").toLowerCase().replace("_", "-").indexOf(pref[p]) === 0) return vs[i];
+    } catch (e) {}
+    return null;
+  }
+  function useOpenAI() { var c = cfg.p.openai; return cfg.voice !== "browser" && c.on && c.key; }
+  function ttsFetch(text) {
+    return fetch("https://api.openai.com/v1/audio/speech", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + cfg.p.openai.key },
+      body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: "ash", input: text, instructions: TTS_STYLE, response_format: "mp3" }) })
+      .then(function (r) { if (!r.ok) throw new Error("tts " + r.status); return r.blob(); }).then(function (b) { return URL.createObjectURL(b); });
+  }
+  function playUrl(url, tok) {
+    return new Promise(function (res) {
+      if (tok !== speakToken) { res(); return; }
+      var a = new Audio(url); sp.audio = a;
+      var end = function () { clearInterval(sp.vt); try { URL.revokeObjectURL(url); } catch (e) {} res(); };
+      a.onended = end; a.onerror = end;
+      a.onplay = function () { clearInterval(sp.vt); sp.vt = setInterval(function () { voice = 0.45 + Math.random() * 0.5; }, 110); };
+      var pr = a.play(); if (pr && pr.catch) pr.catch(end);
+    });
+  }
+  function browserSay(text, tok) {
+    return new Promise(function (res) {
+      if (tok !== speakToken || !("speechSynthesis" in window)) { res(); return; }
+      var done = false, fin = function () { if (!done) { done = true; res(); } };
+      try {
+        var u = new SpeechSynthesisUtterance(text), v = pickVoice();
+        u.lang = v ? v.lang : "sk-SK"; if (v) u.voice = v; u.rate = 1.08; u.pitch = 0.75;
+        u.onend = fin; u.onerror = fin; u.onboundary = function () { voice = 1; };
+        speechSynthesis.speak(u); setTimeout(fin, text.length * 110 + 3000);
+      } catch (e) { fin(); }
+    });
+  }
+  function sayStart() { stopSpeech(); sp.ended = false; sp.chain = Promise.resolve(); setMode("speaking"); }
+  function say(text) {
+    var tok = speakToken; text = clean(text).replace(/[*_#`]/g, ""); if (!text || !cfg.tts) return;
+    sp.pending++;
+    var job = useOpenAI() ? ttsFetch(text) : null;
+    sp.chain = sp.chain.then(function () {
+      if (tok !== speakToken) return;
+      return (job ? job.then(function (u) { return playUrl(u, tok); }) : Promise.reject()).catch(function () { return browserSay(text, tok); });
+    }).then(function () { if (tok !== speakToken) return; sp.pending--; spDone(); });
+  }
+  function sayEnd() { sp.ended = true; spDone(); }
+  function spDone() { if (sp.ended && sp.pending <= 0 && mode === "speaking") setMode("idle"); }
+  function speak(text) { sayStart(); say(text); sayEnd(); }
+
+  /* ---------- volania AI ---------- */
+  var RULES =
+    'Si J.A.R.V.I.S., osobný AI asistent v štýle z filmu Iron Man: pokojný, inteligentný, zdvorilý, so suchým britským humorom. ' +
+    'Odpovedaj po slovensky (ak používateľ píše inak, odpovedz v jeho jazyku). Oslovuj používateľa "pane". ' +
+    'Tvoje odpovede sa čítajú nahlas, preto buď stručný (1 až 3 vety), bez markdownu, zoznamov a emoji, pokiaľ používateľ výslovne nechce dlhšiu odpoveď. ' +
+    'Odpovedaj na otázky ako schopná umelá inteligencia; keď si nie si istý, povedz to. Nemáš prístup na internet ani k aktuálnym údajom. ' +
+    'Vieš: odpovedať na otázky, rozprávať vtipy, robiť prezentácie, Word dokumenty, tabuľky a generovať obrázky (cez ChatGPT alebo Gemini). Používateľ ti môže povedať, ktorú AI použiť, napríklad "cez ChatGPT", "cez Gemini" alebo "cez Claude". ' +
+    'Vtipy sú pôvodné, krátke a suché. Nikdy netvrď, že si niečo odoslal alebo nastavil, ak to nevieš urobiť. ' +
+    'Odpovedz VÝHRADNE jedným JSON objektom v tvare {"type": "...", "reply": "..."} a podľa typu pridaj polia:\n' +
+    '- "chat": bežná odpoveď v "reply".\n' +
+    '- "presentation": používateľ chce prezentáciu alebo PowerPoint. "reply" je jedna veta potvrdenia, "title" je názov, "slides" je pole 5 až 8 objektov {"title": string, "bullets": pole 2 až 4 krátkych odrážok, "notes": string}.\n' +
+    '- "document": používateľ chce Word dokument, list, správu alebo esej. "reply" je jedna veta potvrdenia, "title" je názov, "sections" je pole objektov {"heading": string, "text": string}.\n' +
+    '- "table": používateľ chce tabuľku alebo Excel. "reply" je jedna veta potvrdenia, "title" je názov, "rows" je pole polí reťazcov, prvý riadok je hlavička.\n' +
+    '- "hide": používateľ chce, aby si zmizol z obrazovky.';
+
+  function httpErr(res, body) {
+    var m = ""; try { var j = JSON.parse(body); m = (j.error && (j.error.message || j.error)) || ""; } catch (e) {}
+    var e = new Error(String(m || body || res.status).slice(0, 200)); e.status = res.status; return e;
+  }
+  function callProvider(k, system, turns, maxTokens) {
+    var c = cfg.p[k], url, headers = { "content-type": "application/json" }, body, pick;
+    if (k === "claude") {
+      url = "https://api.anthropic.com/v1/messages";
+      headers["x-api-key"] = c.key; headers["anthropic-version"] = "2023-06-01"; headers["anthropic-dangerous-direct-browser-access"] = "true";
+      body = { model: c.model, max_tokens: maxTokens, system: system, messages: turns };
+      pick = function (j) { return (j.content || []).map(function (p) { return p.text || ""; }).join(""); };
+    } else if (k === "openai") {
+      url = "https://api.openai.com/v1/chat/completions";
+      headers.authorization = "Bearer " + c.key;
+      body = { model: c.model, messages: [{ role: "system", content: system }].concat(turns) };
+      pick = function (j) { return j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : ""; };
+    } else {
+      url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(c.model) + ":generateContent";
+      headers["x-goog-api-key"] = c.key;
+      body = { systemInstruction: { parts: [{ text: system }] }, generationConfig: { maxOutputTokens: maxTokens },
+        contents: turns.map(function (t) { return { role: t.role === "assistant" ? "model" : "user", parts: [{ text: t.content }] }; }) };
+      pick = function (j) { var p = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts; return p ? p.map(function (x) { return x.text || ""; }).join("") : ""; };
+    }
+    return fetch(url, { method: "POST", headers: headers, body: JSON.stringify(body) }).then(function (res) {
+      return res.text().then(function (txt) {
+        if (!res.ok) throw httpErr(res, txt);
+        var out = pick(JSON.parse(txt));
+        if (!out) throw new Error("prázdna odpoveď");
+        return out;
+      });
+    });
+  }
+  function parseJson(txt) {
+    var s = String(txt).trim(), a = s.indexOf("{"), b = s.lastIndexOf("}");
+    if (a < 0 || b <= a) throw new Error("bez JSON");
+    return JSON.parse(s.slice(a, b + 1));
+  }
+  function askAny(list, system, turns, maxTokens) {
+    var idx = 0, firstErr = null;
+    function next() {
+      if (idx >= list.length) return Promise.reject(firstErr || new Error("žiadna AI"));
+      var k = list[idx++];
+      return callProvider(k, system, turns, maxTokens).then(function (txt) { return { k: k, d: parseJson(txt) }; }).catch(function (e) { if (!firstErr) { e.provider = k; firstErr = e; } return next(); });
+    }
+    return next();
+  }
+
+  /* ---------- rýchla odpoveď (streamovanie po vetách) ---------- */
+  var STREAM_RULES = 'Si J.A.R.V.I.S., osobný AI asistent v štýle z filmu Iron Man: pokojný, inteligentný, zdvorilý, so suchým britským humorom. Odpovedaj po slovensky (ak používateľ píše inak, v jeho jazyku). Oslovuj používateľa "pane". Odpovede sa čítajú nahlas: 1 až 3 krátke vety, bez markdownu, zoznamov a emoji, pokiaľ používateľ výslovne nechce dlhšiu odpoveď. Ak si nie si istý, povedz to. Nemáš prístup na internet ani k aktuálnym údajom. Nikdy netvrď, že si niečo odoslal alebo nastavil, ak to nevieš urobiť. Odpovedaj priamo textom, nie JSON.';
+  function streamProvider(k, system, turns, maxTokens, onDelta) {
+    var c = cfg.p[k], url, headers = { "content-type": "application/json" }, body, pick;
+    if (k === "claude") {
+      url = "https://api.anthropic.com/v1/messages";
+      headers["x-api-key"] = c.key; headers["anthropic-version"] = "2023-06-01"; headers["anthropic-dangerous-direct-browser-access"] = "true";
+      body = { model: c.model, max_tokens: maxTokens, system: system, messages: turns, stream: true };
+      pick = function (j) { return j.type === "content_block_delta" && j.delta ? j.delta.text || "" : ""; };
+    } else if (k === "openai") {
+      url = "https://api.openai.com/v1/chat/completions"; headers.authorization = "Bearer " + c.key;
+      body = { model: c.model, stream: true, messages: [{ role: "system", content: system }].concat(turns) };
+      pick = function (j) { var d = j.choices && j.choices[0] && j.choices[0].delta; return (d && d.content) || ""; };
+    } else {
+      url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(c.model) + ":streamGenerateContent?alt=sse";
+      headers["x-goog-api-key"] = c.key;
+      body = { systemInstruction: { parts: [{ text: system }] }, generationConfig: { maxOutputTokens: maxTokens },
+        contents: turns.map(function (t) { return { role: t.role === "assistant" ? "model" : "user", parts: [{ text: t.content }] }; }) };
+      pick = function (j) { var p = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts; return p ? p.map(function (x) { return x.text || ""; }).join("") : ""; };
+    }
+    return fetch(url, { method: "POST", headers: headers, body: JSON.stringify(body) }).then(function (res) {
+      if (!res.ok) return res.text().then(function (t) { throw httpErr(res, t); });
+      var rd = res.body.getReader(), dec = new TextDecoder(), buf = "", full = "";
+      function pump() {
+        return rd.read().then(function (r) {
+          if (r.done) return full;
+          buf += dec.decode(r.value, { stream: true });
+          var lines = buf.split("\n"); buf = lines.pop();
+          lines.forEach(function (l) {
+            if (l.indexOf("data:") !== 0) return;
+            var p = l.slice(5).trim(); if (!p || p === "[DONE]") return;
+            try { var t = pick(JSON.parse(p)); if (t) { full += t; onDelta(t); } } catch (e) {}
+          });
+          return pump();
+        });
+      }
+      return pump();
+    });
+  }
+  function streamAny(list, system, turns, onDelta) {
+    var idx = 0, firstErr = null, got = false;
+    function next() {
+      if (idx >= list.length) return Promise.reject(firstErr || new Error("žiadna AI"));
+      var k = list[idx++];
+      return streamProvider(k, system, turns, 500, function (t) { got = true; onDelta(t); }).then(function (full) { return { k: k, text: full }; })
+        .catch(function (e) { if (got) throw e; if (!firstErr) { e.provider = k; firstErr = e; } return next(); });
+    }
+    return next();
+  }
+  function plainHist() {
+    return history.slice(-8).map(function (m) {
+      if (m.role === "assistant") { try { var j = JSON.parse(m.content); if (j && j.reply) return { role: "assistant", content: j.reply }; } catch (e) {} }
+      return m;
+    });
+  }
+  function streamChat(text, list) {
+    var buf = "", shown = "", started = false;
+    function out(x) { x = clean(x); if (!x) return; if (!started) { started = true; sayStart(); } say(x); }
+    function drain(fin) {
+      var m; while ((m = buf.match(/^([\s\S]{8,}?[.!?…:])\s+/))) { out(m[1]); buf = buf.slice(m[0].length); }
+      if (fin && clean(buf)) { out(buf); buf = ""; }
+    }
+    streamAny(list, STREAM_RULES, plainHist().concat([{ role: "user", content: text }]), function (t) { shown += t; buf += t; answerEl.textContent = clean(shown); drain(false); }).then(function () {
+      drain(true); var reply = clean(shown) || "Hotovo, pane.";
+      history.push({ role: "user", content: text }, { role: "assistant", content: reply });
+      if (started) sayEnd(); else { show(text, reply); speak(reply); }
+    }).catch(function (e) { if (started) sayEnd(); else { show(text, errText(e), true); setMode("idle"); } })
+      .then(function () { busy = false; sendBtn.disabled = false; });
+  }
+
+  /* ---------- súbory ---------- */
+  var lastBlob = null, lastName = "";
+  function clean(s) { return String(s == null ? "" : s).replace(/\s+/g, " ").trim(); }
+  function fname(title, ext) { return (clean(title).replace(/[\\\/:*?"<>|]+/g, "").slice(0, 60) || "Jarvis") + "." + ext; }
+  function offerFile(name, blob) { lastBlob = blob; lastName = name; fileName.textContent = name; fileBtn.textContent = "Stiahnuť"; fileBox.hidden = false; }
+  fileBtn.onclick = function () {
+    if (!lastBlob) return;
+    var u = URL.createObjectURL(lastBlob), a = document.createElement("a");
+    a.href = u; a.download = lastName; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(u); }, 20000);
+    fileBtn.textContent = "Stiahnuté";
+  };
+  function buildPptx(d) {
+    var slides = Array.isArray(d.slides) ? d.slides.slice(0, 12) : [];
+    if (!slides.length) return Promise.reject(new Error("no slides"));
+    if (typeof PptxGenJS === "undefined") return Promise.reject(new Error("pptx lib"));
+    var P = new PptxGenJS(); P.layout = "LAYOUT_16x9"; P.title = clean(d.title) || "Prezentácia";
+    var s0 = P.addSlide(); s0.background = { color: "0A0604" };
+    s0.addShape("rect", { x: 0.6, y: 3.35, w: 1.4, h: 0.07, fill: { color: "FF7A1A" }, line: { color: "FF7A1A", width: 0 } });
+    s0.addText(clean(d.title) || "Prezentácia", { x: 0.6, y: 1.5, w: 8.8, h: 1.7, fontFace: "Arial", fontSize: 38, bold: true, color: "F5E9DC", valign: "bottom", fit: "shrink" });
+    s0.addText("Pripravil J.A.R.V.I.S.", { x: 0.6, y: 3.6, w: 8.8, h: 0.5, fontFace: "Arial", fontSize: 16, color: "FFB066" });
+    slides.forEach(function (s) {
+      var sl = P.addSlide(); sl.background = { color: "FFFFFF" };
+      sl.addShape("rect", { x: 0, y: 0, w: 0.22, h: 5.625, fill: { color: "FF7A1A" }, line: { color: "FF7A1A", width: 0 } });
+      sl.addText(clean(s.title), { x: 0.7, y: 0.4, w: 8.7, h: 0.9, fontFace: "Arial", fontSize: 28, bold: true, color: "1A0C02", fit: "shrink" });
+      var bl = (Array.isArray(s.bullets) ? s.bullets : []).slice(0, 6).map(function (b) { return { text: clean(b), options: { bullet: { code: "25A0" }, breakLine: true, paraSpaceAfter: 10 } }; });
+      if (bl.length) sl.addText(bl, { x: 0.7, y: 1.5, w: 8.7, h: 3.6, fontFace: "Arial", fontSize: 20, color: "3A2A1E", valign: "top", fit: "shrink" });
+      if (s.notes) sl.addNotes(clean(s.notes));
+    });
+    return P.write({ outputType: "blob" }).then(function (blob) { return { name: fname(d.title, "pptx"), blob: blob }; });
+  }
+  function xesc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function para(text, size, bold) { return '<w:p><w:pPr><w:spacing w:after="160"/></w:pPr><w:r><w:rPr>' + (bold ? "<w:b/>" : "") + '<w:sz w:val="' + size + '"/></w:rPr><w:t xml:space="preserve">' + xesc(text) + "</w:t></w:r></w:p>"; }
+  function buildDocx(d) {
+    var secs = Array.isArray(d.sections) ? d.sections : [];
+    if (!secs.length) return Promise.reject(new Error("no sections"));
+    if (typeof JSZip === "undefined") return Promise.reject(new Error("zip lib"));
+    var body = para(clean(d.title) || "Dokument", 40, true);
+    secs.forEach(function (s) {
+      if (s.heading) body += para(clean(s.heading), 30, true);
+      String(s.text || "").split(/\n+/).forEach(function (p) { if (p.trim()) body += para(p.trim(), 24, false); });
+    });
+    var z = new JSZip();
+    z.file("[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+    z.file("_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+    z.file("word/document.xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + body + '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>');
+    return z.generateAsync({ type: "blob" }).then(function (blob) { return { name: fname(d.title, "docx"), blob: blob }; });
+  }
+  function buildCsv(d) {
+    var rows = Array.isArray(d.rows) ? d.rows : [];
+    if (!rows.length) return Promise.reject(new Error("no rows"));
+    var csv = "﻿" + rows.map(function (r) { return (Array.isArray(r) ? r : [r]).map(function (c) { return '"' + String(c == null ? "" : c).replace(/"/g, '""') + '"'; }).join(";"); }).join("\r\n");
+    return Promise.resolve({ name: fname(d.title, "csv"), blob: new Blob([csv], { type: "text/csv" }) });
+  }
+
+  /* ---------- rozhovor ---------- */
+  var history = [], busy = false;
+  function heavy(t) { return /prezent|power\s?point|pptx|slajd|slide|dokument|word|docx|list\b|esej|tabu[lľ]k|excel|csv/i.test(t); }
+  function show(you, answer, isErr) {
+    stage.classList.add("has-reply"); replyBox.hidden = false; replyBox.classList.toggle("errshow", !!isErr);
+    youEl.textContent = you ? "Vy: " + you : "";
+    answerEl.textContent = answer; answerEl.className = "answer" + (isErr ? " err" : "");
+    noteEl.hidden = true; picEl.hidden = true; picEl.removeAttribute("src"); replyBox.scrollTop = 0;
+  }
+  function errText(e) {
+    var s = e && e.status, who = e && e.provider ? PROVIDERS[e.provider].label : "AI";
+    if (s === 401 || s === 403) return "Pane, " + who + " odmietla kľúč. Skontrolujte ho v nastaveniach.";
+    if (s === 404) return "Pane, " + who + " nenašla zadaný model. Opravte jeho názov v nastaveniach.";
+    if (s === 429) return "Pane, " + who + " hlási limit alebo nedostatok kreditu.";
+    if (e && /Failed to fetch|NetworkError|Load failed/i.test(e.message || "")) return "Pane, nemám spojenie s internetom alebo ho " + who + " blokuje.";
+    return "Pane, nepodarilo sa mi získať odpoveď (" + who + "): " + String((e && e.message) || "neznáma chyba").slice(0, 120);
+  }
+  function hide() { stopSpeech(); stopMic(); clearTimeout(sleepT); document.body.classList.add("asleep"); document.body.classList.remove("ctl", "kb"); replyBox.hidden = true; stage.classList.remove("has-reply"); liveEl.textContent = ""; setMode("idle"); }
+  function wake() { if (!document.body.classList.contains("asleep")) return; appear = 0; document.body.classList.remove("asleep"); chime(); poke(); }
+  $("hideBtn").onclick = hide; $("wake").onclick = wake;
+
+  function verifyAnswer(list, question, answer) {
+    var other = list.slice(1)[0]; if (!other) return;
+    var sys = 'Si prísny kontrolór faktov. Odpovedz VÝHRADNE JSON objektom {"ok": true alebo false, "note": "jedna krátka veta po slovensky s opravou, ak ok je false, inak prázdny reťazec"}.';
+    var turn = [{ role: "user", content: "Otázka: " + question + "\nOdpoveď na kontrolu: " + answer + "\nJe odpoveď vecne správna? Vtipy a názory ignoruj, kontroluj len fakty." }];
+    callProvider(other, sys, turn, 300).then(parseJson).then(function (v) {
+      if (v && v.ok === false && clean(v.note)) {
+        noteEl.textContent = "Overenie (" + PROVIDERS[other].label + "): " + clean(v.note); noteEl.hidden = false;
+      }
+    }).catch(function () {});
+  }
+
+  /* ---------- výber AI hlasom a obrázky ---------- */
+  var ROUTE = /(?:cez|pomocou|sp[yý]taj sa|op[yý]taj sa)\s+(chat\s?gpt|čet\s?\S*|gpt|openai|gemini|gemin[iy]|džemin\S*|claude|claud|klod\S*|kloud\S*)(?=[\s,.!?]|$)/i;
+  function routeKey(w) { w = w.toLowerCase(); if (/gpt|openai|čet/.test(w)) return "openai"; if (/gemin|džemin/.test(w)) return "gemini"; return "claude"; }
+  var IMG_NOUN = /(obr[aá]z|fotk|ilustr[aá]ci|logo|nakresli|namaluj)/i, IMG_VERB = /(vytvor|urob|nakresli|namaluj|vygeneruj|generuj|vyrob|navrhni)/i, NOT_IMG = /(prezent|power\s?point|dokument|tabu[lľ]k|excel|word)/i;
+  function wantsImage(t) { return IMG_NOUN.test(t) && IMG_VERB.test(t) && !NOT_IMG.test(t); }
+  function b64Blob(b64, mime) {
+    var bin = atob(b64), n = bin.length, u = new Uint8Array(n);
+    for (var i = 0; i < n; i++) u[i] = bin.charCodeAt(i);
+    return new Blob([u], { type: mime || "image/png" });
+  }
+  function makeImage(k, prompt) {
+    var c = cfg.p[k], url, headers = { "content-type": "application/json" }, body, pick;
+    if (k === "openai") {
+      url = "https://api.openai.com/v1/images/generations"; headers.authorization = "Bearer " + c.key;
+      body = { model: c.img || "gpt-image-1", prompt: prompt, size: "1024x1024" };
+      if (/dall-e/i.test(body.model)) body.response_format = "b64_json";
+      pick = function (j) { var d = j.data && j.data[0]; if (d && d.b64_json) return b64Blob(d.b64_json, "image/png"); throw new Error("bez obrázka"); };
+    } else {
+      url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(c.img || "gemini-2.5-flash-image") + ":generateContent";
+      headers["x-goog-api-key"] = c.key;
+      body = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseModalities: ["IMAGE", "TEXT"] } };
+      pick = function (j) {
+        var parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+        for (var i = 0; i < parts.length; i++) { var d = parts[i].inlineData || parts[i].inline_data; if (d && d.data) return b64Blob(d.data, d.mimeType || d.mime_type || "image/png"); }
+        throw new Error("Gemini nevrátil obrázok");
+      };
+    }
+    return fetch(url, { method: "POST", headers: headers, body: JSON.stringify(body) }).then(function (res) {
+      return res.text().then(function (txt) { if (!res.ok) throw httpErr(res, txt); return pick(JSON.parse(txt)); });
+    });
+  }
+  function runImage(text, route, list) {
+    var cands = (route ? [route] : list).filter(function (k) { return k === "openai" || k === "gemini"; });
+    if (route === "claude") { show(text, "Claude obrázky generovať neumí, pane. Povedzte „cez ChatGPT“ alebo „cez Gemini“.", true); return; }
+    if (!cands.length) { show(text, "Pane, na obrázky potrebujem zaškrtnutý ChatGPT alebo Gemini s kľúčom v nastaveniach.", true); return; }
+    busy = true; sendBtn.disabled = true; $("chips").hidden = true;
+    setMode("thinking"); show(text, "Kreslím…");
+    var k = cands[0], idx = 0, firstErr = null;
+    function attempt() {
+      k = cands[idx++];
+      return makeImage(k, text).catch(function (e) { if (!firstErr) { e.provider = k; firstErr = e; } if (idx < cands.length) return attempt(); throw firstErr; });
+    }
+    attempt().then(function (blob) {
+      var reply = "Hotovo, pane. Obrázok je pripravený (" + PROVIDERS[k].label + ").";
+      show(text, reply); speak(reply);
+      picEl.src = URL.createObjectURL(blob); picEl.hidden = false;
+      offerFile(fname("Obrazok-" + clean(text).slice(0, 24), "png"), blob);
+    }).catch(function (e) { show(text, errText(e), true); setMode("idle"); }).then(function () { busy = false; sendBtn.disabled = false; });
+  }
+
+  function send(text) {
+    text = clean(text);
+    if (!text || busy) return;
+    stopSpeech(); stopMic(); fileBox.hidden = true; lastBlob = null; msg.value = "";
+    if (/^(jarvis[,!\s]*)?(zmizni|skry sa|vypni sa|choď preč|odíď|zmiz)\b/i.test(text)) {
+      show(text, "Rozumiem, pane. Som na príkaz."); setTimeout(hide, 900); return;
+    }
+    var route = null, rm = text.match(ROUTE);
+    if (rm) { route = routeKey(rm[1]); text = clean(text.replace(rm[0], " ").replace(/^jarvis[,!\s]*/i, "")); }
+    var list = active();
+    if (route) {
+      if (list.indexOf(route) < 0) { show(text, "Pane, " + PROVIDERS[route].label + " nie je zaškrtnutý alebo nemá kľúč v nastaveniach.", true); return; }
+      if (!(wantsImage(text) && route === "claude")) list = [route];
+    }
+    if (list.length && wantsImage(text)) { runImage(text, route, active()); return; }
+    if (!list.length) { show(text, "Pane, najprv zaškrtnite aspoň jednu AI a vložte jej API kľúč v nastaveniach.", true); return; }
+    busy = true; sendBtn.disabled = true; $("chips").hidden = true;
+    setMode("thinking"); show(text, "…");
+    if (!heavy(text)) { streamChat(text, list); return; }
+    var turns = history.slice(-8).concat([{ role: "user", content: text }]);
+    askAny(list, RULES, turns, heavy(text) ? 4096 : 700).then(function (r) {
+      var d = r.d, reply = clean(d.reply) || "Hotovo, pane.";
+      history.push({ role: "user", content: text }, { role: "assistant", content: JSON.stringify({ type: d.type || "chat", reply: reply }) });
+      show(text, reply); speak(reply);
+      if (d.type === "hide") { setTimeout(hide, Math.min(6000, 1200 + reply.length * 55)); return; }
+      var maker = d.type === "presentation" ? buildPptx : d.type === "document" ? buildDocx : d.type === "table" ? buildCsv : null;
+      if (maker) {
+        return maker(d).then(function (f) { offerFile(f.name, f.blob); }).catch(function () {
+          answerEl.textContent = reply + "\nSúbor sa mi nepodarilo zostaviť, pane. Skúste pokyn zopakovať (pri prvom použití potrebujem internet).";
+          answerEl.className = "answer err";
+        });
+      }
+      if (cfg.verify && (!d.type || d.type === "chat") && list.length > 1) verifyAnswer(r.k === list[0] ? list : [r.k].concat(list.filter(function (x) { return x !== r.k; })), text, reply);
+    }).catch(function (e) { show(text, errText(e), true); setMode("idle"); }).then(function () { busy = false; sendBtn.disabled = false; });
+  }
+  $("form").addEventListener("submit", function (e) { e.preventDefault(); send(msg.value); });
+  $("chips").addEventListener("click", function (e) {
+    var b = e.target.closest(".chip"); if (!b) return;
+    if (b.dataset.send) send(b.dataset.send); else { msg.value = b.dataset.fill || ""; msg.focus(); }
+  });
+
+  /* ---------- mikrofón: počúva stále, zobrazí sa na "Hej Džarvis" ---------- */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, listening = false, restartT = 0, silT = 0, sleepT = 0, pending = "", retryMs = 250, needTap = false, denied = false, everOk = false, typing = false, AC = null;
+  var WAKE = /(?:dž|dz|dj|j|ž|č|ch|cz|g)arv[iy][sz]\w*/i, WAKE_G = /(?:(?:hej|hey|ahoj|čau)\s+)?(?:dž|dz|dj|j|ž|č|ch|cz|g)arv[iy][sz]\w*[,.!?]?/ig;
+  function asleep() { return document.body.classList.contains("asleep"); }
+  function hint(t) { var h = $("hint"); h.textContent = t || ""; h.hidden = !t; }
+  function ac() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); } catch (e) {} return AC; }
+  function chime() {
+    try {
+      if (!AC) return; var t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
+      o.type = "sine"; o.frequency.setValueAtTime(620, t); o.frequency.exponentialRampToValueAtTime(980, t + 0.14);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.1, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + 0.25);
+    } catch (e) {}
+  }
+  function poke() {
+    clearTimeout(sleepT); if (asleep()) return;
+    sleepT = setTimeout(function () {
+      if (!busy && mode !== "speaking" && mode !== "thinking" && !typing && settings.hidden && !document.body.classList.contains("ctl")) hide(); else poke();
+    }, 9000);
+  }
+  function paintText() { document.body.classList.toggle("notext", !cfg.text); }
+  function paintMic() { micBtn.classList.toggle("on", !!cfg.mic && !denied); micBtn.setAttribute("aria-pressed", String(!!cfg.mic)); paintTele(); }
+  function scheduleMic(ms) { clearTimeout(restartT); restartT = setTimeout(startMic, ms == null ? 250 : ms); }
+  function stopMic() { clearTimeout(restartT); clearTimeout(silT); if (rec && listening) { try { rec.stop(); } catch (e) {} } }
+  function shouldRun() { return SR && cfg.mic && !denied && !needTap && !busy && !typing && settings.hidden && !document.hidden && (mode === "idle" || mode === "listening"); }
+  function flush(drop) {
+    clearTimeout(silT);
+    var t = clean(pending); pending = ""; liveEl.textContent = "";
+    if (drop) drop();
+    if (asleep()) return;
+    t = clean(t.replace(WAKE_G, " ")); if (t.length < 2) return;
+    send(t);
+  }
+  function startMic() {
+    if (!shouldRun() || listening) return;
+    var base = 0, last = 0, woke = false;
+    rec = new SR(); rec.lang = "sk-SK"; rec.interimResults = true; rec.continuous = true; pending = "";
+    rec.onstart = function () { listening = true; if (mode === "idle") setMode("listening"); };
+    rec.onaudiostart = function () { everOk = true; hint(""); };
+    rec.onspeechstart = function () { voice = Math.max(voice, 0.8); };
+    rec.onresult = function (ev) {
+      last = ev.results.length; var s = "", i, L = function (x) { return String(x).toLowerCase().trim(); };
+      var cum = last - base > 1 && L(ev.results[last - 1][0].transcript).indexOf(L(ev.results[last - 2][0].transcript)) === 0;
+      if (cum) s = ev.results[last - 1][0].transcript; else for (i = base; i < last; i++) s += ev.results[i][0].transcript + " ";
+      if (asleep()) {
+        if (!WAKE.test(s)) { base = Math.max(base, last - 1); return; }
+        wake(); woke = true; s = s.slice(s.search(WAKE));
+      }
+      if (woke) s = s.replace(WAKE_G, " ");
+      pending = clean(s); voice = 1; poke(); liveEl.textContent = pending;
+      clearTimeout(silT); silT = setTimeout(function () { flush(function () { base = last; woke = false; }); }, ev.results[last - 1].isFinal ? 150 : 900);
+    };
+    rec.onerror = function (ev) {
+      var e = ev.error;
+      if (e === "not-allowed" || e === "service-not-allowed") {
+        if (everOk) { denied = true; paintMic(); show("", "Pane, povoľte tejto aplikácii mikrofón v nastaveniach telefónu.", true); } else { needTap = true; hint("Klepnite na obrazovku a povoľte mikrofón"); }
+      } else if (e === "network") retryMs = 3000;
+    };
+    rec.onend = function () {
+      listening = false; if (pending) flush();
+      if (needTap) { if (mode === "listening") mode = "idle"; return; }
+      if (shouldRun()) scheduleMic(retryMs); else if (mode === "listening") setMode("idle");
+      retryMs = 250;
+    };
+    try { rec.start(); } catch (e) { needTap = true; hint("Klepnite na obrazovku a povoľte mikrofón"); }
+  }
+  function lockScreen() { try { if (navigator.wakeLock && !document.hidden) navigator.wakeLock.request("screen").catch(function () {}); } catch (e) {} }
+  if (SR) {
+    micBtn.hidden = false; paintMic();
+    micBtn.onclick = function () {
+      cfg.mic = !cfg.mic; saveCfg(); paintMic();
+      if (cfg.mic) { denied = false; needTap = false; scheduleMic(0); } else { stopMic(); liveEl.textContent = ""; if (mode === "listening") setMode("idle"); }
+    };
+    document.addEventListener("pointerdown", function () { ac(); lockScreen(); if (needTap) { needTap = false; hint(""); scheduleMic(0); } }, { passive: true });
+    document.addEventListener("visibilitychange", function () { if (document.hidden) stopMic(); else { lockScreen(); scheduleMic(400); } });
+    msg.addEventListener("focus", function () { typing = true; stopMic(); });
+    msg.addEventListener("blur", function () { typing = false; scheduleMic(400); });
+    $("cfgBtn").addEventListener("click", stopMic);
+    $("cfgDone").addEventListener("click", function () { scheduleMic(300); });
+    $("wake").addEventListener("click", function () { scheduleMic(0); });
+    lockScreen();
+  } else { hint("Tento prehliadač nepočúva. Otvorte Jarvisa v Chrome."); }
+  stage.addEventListener("click", function () {
+    if (mode === "speaking") { stopSpeech(); return; }
+    var on = document.body.classList.toggle("ctl"); if (!on) document.body.classList.remove("kb"); poke();
+  });
+  $("gear").onclick = function () { stopMic(); buildSettings(); settings.hidden = false; };
+  paintTele(); paintText();
+  $("kbBtn").onclick = function () { var on = document.body.classList.toggle("kb"); if (on) msg.focus(); else msg.blur(); };
+  $("showText").checked = !!cfg.text; $("showText").onchange = function () { cfg.text = this.checked; saveCfg(); paintText(); };
+  $("voiceSel").value = cfg.voice; $("voiceSel").onchange = function () { cfg.voice = this.value; saveCfg(); };
+  $("theme").value = cfg.theme; $("theme").onchange = function () { cfg.theme = this.value; saveCfg(); applyTheme(); };
+  try { if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js"); } catch (e) {}
+
+  setMode("idle");
+  if (!active().length) { buildSettings(); settings.hidden = false; }
+})();
+</script>
+</body>
+</html>
